@@ -12,7 +12,9 @@ use swc_core::{
 };
 use turbo_tasks::Vc;
 use turbopack_binding::turbopack::{
-    ecmascript::{CustomTransformer, EcmascriptInputTransform, TransformContext},
+    ecmascript::{
+        CustomTransformer, EcmascriptInputTransform, OptionTransformPlugin, TransformContext,
+    },
     turbopack::module_options::{ModuleRule, ModuleRuleEffect},
 };
 
@@ -36,6 +38,17 @@ pub fn get_next_react_server_components_transform_rule(
     )
 }
 
+#[turbo_tasks::function]
+pub async fn get_next_react_server_components_transform_plugin(
+    is_react_server_layer: bool,
+) -> Result<Vc<OptionTransformPlugin>> {
+    Ok(Vc::cell(Some(Vc::cell(
+        Box::new(NextJsReactServerComponents {
+            is_react_server_layer,
+        }) as _,
+    ))))
+}
+
 #[derive(Debug)]
 struct NextJsReactServerComponents {
     is_react_server_layer: bool,
@@ -46,16 +59,18 @@ impl CustomTransformer for NextJsReactServerComponents {
     async fn transform(&self, program: &mut Program, ctx: &TransformContext<'_>) -> Result<()> {
         let p = std::mem::replace(program, Program::Module(Module::dummy()));
 
-        let file_name = if ctx.file_name_str.is_empty() {
+        let file_name = if ctx.file_path_str.is_empty() {
             FileName::Anon
         } else {
-            FileName::Real(ctx.file_name_str.into())
+            FileName::Real(ctx.file_path_str.into())
         };
 
         let mut visitor = server_components(
             file_name,
             Config::WithOptions(Options {
                 is_react_server_layer: self.is_react_server_layer,
+                //should_transform_proxy: false,
+                should_transform_proxy: true,
             }),
             ctx.comments,
             Some(PathBuf::from(ctx.file_path.parent().await?.path.clone())),

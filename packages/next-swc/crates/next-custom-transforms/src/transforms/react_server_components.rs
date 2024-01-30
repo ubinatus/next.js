@@ -38,10 +38,12 @@ impl Config {
 #[serde(rename_all = "camelCase")]
 pub struct Options {
     pub is_react_server_layer: bool,
+    pub should_transform_proxy: bool,
 }
 
 struct ReactServerComponents<C: Comments> {
     is_react_server_layer: bool,
+    should_transform_proxy: bool,
     filepath: String,
     app_dir: Option<PathBuf>,
     comments: C,
@@ -366,61 +368,63 @@ impl<C: Comments> ReactServerComponents<C> {
     // Convert the client module to the module reference code and add a special
     // comment to the top of the file.
     fn to_module_ref(&self, module: &mut Module, is_cjs: bool) {
-        // Clear all the statements and module declarations.
-        module.body.clear();
+        if self.should_transform_proxy {
+            // Clear all the statements and module declarations.
+            module.body.clear();
 
-        let proxy_ident = quote_ident!("createProxy");
-        let filepath = quote_str!(&*self.filepath);
+            let proxy_ident = quote_ident!("createProxy");
+            let filepath = quote_str!(&*self.filepath);
 
-        prepend_stmts(
-            &mut module.body,
-            vec![
-                ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(VarDecl {
-                    span: DUMMY_SP,
-                    kind: VarDeclKind::Const,
-                    decls: vec![VarDeclarator {
+            prepend_stmts(
+                &mut module.body,
+                vec![
+                    ModuleItem::Stmt(Stmt::Decl(Decl::Var(Box::new(VarDecl {
                         span: DUMMY_SP,
-                        name: Pat::Object(ObjectPat {
+                        kind: VarDeclKind::Const,
+                        decls: vec![VarDeclarator {
                             span: DUMMY_SP,
-                            props: vec![ObjectPatProp::Assign(AssignPatProp {
+                            name: Pat::Object(ObjectPat {
                                 span: DUMMY_SP,
-                                key: proxy_ident,
-                                value: None,
-                            })],
-                            optional: false,
-                            type_ann: None,
-                        }),
-                        init: Some(Box::new(Expr::Call(CallExpr {
-                            span: DUMMY_SP,
-                            callee: quote_ident!("require").as_callee(),
-                            args: vec![quote_str!("private-next-rsc-mod-ref-proxy").as_arg()],
-                            type_args: Default::default(),
-                        }))),
-                        definite: false,
-                    }],
-                    declare: false,
-                })))),
-                ModuleItem::Stmt(Stmt::Expr(ExprStmt {
-                    span: DUMMY_SP,
-                    expr: Box::new(Expr::Assign(AssignExpr {
+                                props: vec![ObjectPatProp::Assign(AssignPatProp {
+                                    span: DUMMY_SP,
+                                    key: proxy_ident,
+                                    value: None,
+                                })],
+                                optional: false,
+                                type_ann: None,
+                            }),
+                            init: Some(Box::new(Expr::Call(CallExpr {
+                                span: DUMMY_SP,
+                                callee: quote_ident!("require").as_callee(),
+                                args: vec![quote_str!("private-next-rsc-mod-ref-proxy").as_arg()],
+                                type_args: Default::default(),
+                            }))),
+                            definite: false,
+                        }],
+                        declare: false,
+                    })))),
+                    ModuleItem::Stmt(Stmt::Expr(ExprStmt {
                         span: DUMMY_SP,
-                        left: PatOrExpr::Expr(Box::new(Expr::Member(MemberExpr {
+                        expr: Box::new(Expr::Assign(AssignExpr {
                             span: DUMMY_SP,
-                            obj: Box::new(Expr::Ident(quote_ident!("module"))),
-                            prop: MemberProp::Ident(quote_ident!("exports")),
-                        }))),
-                        op: op!("="),
-                        right: Box::new(Expr::Call(CallExpr {
-                            span: DUMMY_SP,
-                            callee: quote_ident!("createProxy").as_callee(),
-                            args: vec![filepath.as_arg()],
-                            type_args: Default::default(),
+                            left: PatOrExpr::Expr(Box::new(Expr::Member(MemberExpr {
+                                span: DUMMY_SP,
+                                obj: Box::new(Expr::Ident(quote_ident!("module"))),
+                                prop: MemberProp::Ident(quote_ident!("exports")),
+                            }))),
+                            op: op!("="),
+                            right: Box::new(Expr::Call(CallExpr {
+                                span: DUMMY_SP,
+                                callee: quote_ident!("createProxy").as_callee(),
+                                args: vec![filepath.as_arg()],
+                                type_args: Default::default(),
+                            })),
                         })),
                     })),
-                })),
-            ]
-            .into_iter(),
-        );
+                ]
+                .into_iter(),
+            );
+        }
 
         self.prepend_comment_node(module, is_cjs);
     }
@@ -471,6 +475,9 @@ impl<C: Comments> ReactServerComponents<C> {
         let is_error_file = Regex::new(r"[\\/]error\.(ts|js)x?$")
             .unwrap()
             .is_match(&self.filepath);
+
+        println!("assert_server_filename {}", self.filepath);
+
         if is_error_file {
             if let Some(app_dir) = &self.app_dir {
                 if let Some(app_dir) = app_dir.to_str() {
@@ -639,8 +646,18 @@ pub fn server_components<C: Comments>(
         Config::WithOptions(x) => x.is_react_server_layer,
         _ => false,
     };
+
+    let should_transform_proxy = match &config {
+        Config::WithOptions(Options {
+            should_transform_proxy,
+            ..
+        }) => *should_transform_proxy,
+        _ => true,
+    };
+
     as_folder(ReactServerComponents {
         is_react_server_layer,
+        should_transform_proxy,
         comments,
         filepath: match filename {
             FileName::Custom(path) => format!("<{}>", path),

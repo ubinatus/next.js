@@ -197,6 +197,7 @@ function getBaseSWCOptions({
       serverComponents && !jest
         ? {
             isReactServerLayer,
+            shouldTransformProxy: true,
           }
         : undefined,
     serverActions:

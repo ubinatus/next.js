@@ -69,13 +69,12 @@ pub async fn get_next_server_transforms_rules(
         ServerContextType::AppRSC {
             client_transition, ..
         } => {
+            rules.push(get_next_react_server_components_transform_rule(
+                true, mdx_rs,
+            ));
             rules.push(get_server_actions_transform_rule(
                 ActionsTransform::Server,
                 mdx_rs,
-            ));
-
-            rules.push(get_next_react_server_components_transform_rule(
-                true, mdx_rs,
             ));
 
             if let Some(client_transition) = client_transition {

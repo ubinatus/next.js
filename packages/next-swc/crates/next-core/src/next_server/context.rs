@@ -57,6 +57,7 @@ use crate::{
         },
         transforms::{
             emotion::get_emotion_transform_plugin, get_relay_transform_plugin,
+            next_react_server_components::get_next_react_server_components_transform_plugin,
             styled_components::get_styled_components_transform_plugin,
             styled_jsx::get_styled_jsx_transform_plugin,
             swc_ecma_transform_plugins::get_swc_ecma_transform_plugin,
@@ -536,6 +537,8 @@ pub async fn get_server_module_options_context(
                     .flatten()
                     .collect();
 
+            let c = *get_next_react_server_components_transform_plugin(true).await?;
+
             if let Some(ecmascript_client_reference_transition_name) =
                 ecmascript_client_reference_transition_name
             {
@@ -555,7 +558,16 @@ pub async fn get_server_module_options_context(
 
             let custom_ecma_transform_plugins = Some(CustomEcmascriptTransformPlugins::cell(
                 CustomEcmascriptTransformPlugins {
-                    source_transforms: base_source_transforms,
+                    source_transforms: base_source_transforms.clone(),
+                    output_transforms: output_transforms.clone(),
+                },
+            ));
+
+            let mut base2: Vec<Vc<TransformPlugin>> = vec![c].into_iter().flatten().collect();
+            base2.extend(base_source_transforms);
+            let d_ecma_plugins = Some(CustomEcmascriptTransformPlugins::cell(
+                CustomEcmascriptTransformPlugins {
+                    source_transforms: base2,
                     output_transforms,
                 },
             ));
