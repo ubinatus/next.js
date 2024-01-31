@@ -10,6 +10,7 @@
     "build-native-no-plugin-woa": "napi build --platform -p next-swc-napi --cargo-cwd ../../ --cargo-name next_swc_napi --cargo-flags=--no-default-features --features image-webp --js false native",
     "build-native-no-plugin-woa-release": "napi build --platform -p next-swc-napi --cargo-cwd ../../ --cargo-name next_swc_napi --release --cargo-flags=--no-default-features --features image-webp,tracing/release_max_level_info --js false native",
     "build-wasm": "wasm-pack build crates/wasm --scope=next",
+    "build-napi-wasi": "napi build --target wasm32-wasi-preview1-threads -p next-swc-napi --cargo-cwd ../../ --cargo-name next_swc_napi --js false",
     "cache-build-native": "echo $(ls native)",
     "rust-check-fmt": "cd ../..; cargo fmt -- --check",
     "rust-check-clippy": "cargo clippy --workspace --all-targets -- -D warnings -A deprecated",
@@ -31,7 +32,7 @@
     }
   },
   "devDependencies": {
-    "@napi-rs/cli": "2.16.2",
+    "@napi-rs/cli": "2.18.0",
     "cross-env": "6.0.3"
   }
 }
