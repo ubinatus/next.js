@@ -71,7 +71,7 @@ pub async fn get_styled_components_transform_rule(
             _ => None,
         })
         .flatten()
-        .map(|transformer| get_ecma_transform_rule(Box::new(transformer), enable_mdx_rs));
+        .map(|transformer| get_ecma_transform_rule(Box::new(transformer), enable_mdx_rs, true));
 
     Ok(module_rule)
 }

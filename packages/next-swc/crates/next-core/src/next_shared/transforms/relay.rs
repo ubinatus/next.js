@@ -39,7 +39,11 @@ pub async fn get_relay_transform_rule(next_config: Vc<NextConfig>) -> Result<Opt
         .as_ref()
         .map(|value| {
             value.relay.as_ref().map(|config| {
-                get_ecma_transform_rule(Box::new(RelayTransformer::new(config)), enable_mdx_rs)
+                get_ecma_transform_rule(
+                    Box::new(RelayTransformer::new(config)),
+                    enable_mdx_rs,
+                    true,
+                )
             })
         })
         .flatten();

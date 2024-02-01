@@ -25,7 +25,7 @@ pub async fn get_emotion_transform_rule(next_config: Vc<NextConfig>) -> Result<O
             _ => None,
         })
         .flatten()
-        .map(|transformer| get_ecma_transform_rule(Box::new(transformer), enable_mdx_rs));
+        .map(|transformer| get_ecma_transform_rule(Box::new(transformer), enable_mdx_rs, true));
 
     Ok(module_rule)
 }
